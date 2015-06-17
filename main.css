@@ -1,0 +1,42 @@
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box; 
+    margin: 10px;
+  }
+
+html, body {
+    font-family: avenir;        
+    margin: 0;
+    padding: 0;
+}
+
+.clearfix:after {
+	clear: both;
+}
+
+.container {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+#locations {
+  width: 650px;
+  height: 250px;
+  overflow: auto;
+}
+
+#map-canvas {
+  width: 100%;
+  height: 450px;
+}
+
+ul {
+  list-style: none;
+}
+
+li {
+  font-size: 14px;
+}
