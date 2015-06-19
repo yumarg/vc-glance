@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+<meta charset="utf-8">
+<title>Map</title>
+<link rel="stylesheet" type="text/css" href="main.css">
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=false"></script>
+<script type="text/javascript">
+var geocoder;
+var map;
+
+function initialize() {
+  geocoder = new google.maps.Geocoder();
+  var latlng = new google.maps.LatLng(42.3601, 71.0589);
+  var mapOptions = {
+    zoom: 8,
+    center: latlng
+  }
+  map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+  console.log("geocoder initialized");
+}
+
+function codeAddress(address) {
+  geocoder.geocode( { 'address': address}, function(results, status) {
+    if (status == google.maps.GeocoderStatus.OK) {
+      map.setCenter(results[0].geometry.location);
+      var marker = new google.maps.Marker({
+          map: map,
+          position: results[0].geometry.location
+      });
+    }
+  });
+  console.log("codeAddress called");
+}	
+
+$(document).ready(function() {
+	initialize();
+});
+</script>
+</head>
+<body>
+
+	<div id="locationsinfo">
+		<p style="font-weight: bold">LOCATIONS</p>
+		<div id="locations"></div>
+	</div>
+
+	<div id="map-canvas"></div>
+
+	<script type="text/javascript">
+
+	function makeReadable(str) {
+		if (str == "U.S.") {
+			return "United States";
+		}
+    return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+	}
+
+	var InfoFromFeed = new XMLHttpRequest();
+	var url = "feed.txt";
+
+	InfoFromFeed.onreadystatechange = function() {
+	    if (InfoFromFeed.readyState == 4 && InfoFromFeed.status == 200) {
+        var data = JSON.parse(InfoFromFeed.responseText);
+
+        // var Countries2Cities = (function() {
+        // 	var masterlist = [];
+        // 	function getCountries2Cities(callback) {
+        // 		$.ajax({
+        // 			method: 'GET',
+        // 			url: 'countries2cities.json',
+        // 			dataType: 'json',
+        // 			success: function(data) {
+        // 				for (var key in data) {
+        // 					if (data.hasOwnProperty(key)) {
+        // 						masterlist.push(key);
+        // 						for (k = 0; k < data[key].length; k++) {
+        // 							masterlist.push(data[key][k]);
+        // 						}
+        // 					}
+        // 				}
+        // 				callback(masterlist);
+        // 			}
+        // 		});
+        // 	}
+        // 	return {
+        // 		getMasterList: function() {
+        // 			getCountries2Cities(function(data){
+        // 			});
+        // 			return masterlist
+        // 		}
+        // 	}
+        // })();
+
+				var countriescitieslist;
+
+		    var CountriesCitiesData = (function(){
+		      var masterlist = [];
+		      function getCountriesCities(callback) {
+		        $.ajax({
+		          method: 'GET',
+		          url: 'countries2cities.json',
+		          dataType: 'json',
+		          success: function(data) {
+        				for (var key in data) {
+        					if (data.hasOwnProperty(key)) {
+        						masterlist.push(key);
+        						for (k = 0; k < data[key].length; k++) {
+        							masterlist.push(data[key][k]);
+        						}
+        					}
+        				}
+		            callback(masterlist);
+		          }
+		        });
+		      }
+		      return {
+		        getList: function() {
+		          getCountriesCities(function(data){});
+		          return masterlist
+		        }
+		      }
+		    })();        
+
+		    countriescitieslist = CountriesCitiesData.getList();
+
+	    	for (i = 0; i < data.posts.length; i++) {
+	      	if (data.posts[i].locations.length != 0) {
+	        	var ul = document.createElement("ul");
+	        	ul.id = i.toString();
+	        	$("#locations").append(ul);
+		        $("#locations #" + ul.id).append("<li style='font-weight: bold'>" + data.posts[i].title + "</li>");
+		        for (j = 0; j < data.posts[i].locations.length; j++) {
+		        	if (makeReadable(data.posts[i].locations[j]) in countriescitieslist) {
+		        		codeAddress(makeReadable(data.posts[i].locations[j]));
+	      				$("#locations #" + ul.id).append("<li>" + makeReadable(data.posts[i].locations[j]) + "</li>");
+				        if (j == data.posts[i].locations.length - 1) {
+				        	$("#locations #" + ul.id).append("<br>");
+				        }
+		        	}
+		        }
+	      	}
+	      }
+	    }
+	  }
+
+		InfoFromFeed.open("GET", url, true);
+		InfoFromFeed.send();
+
+	</script>
+</body>
+</html>
