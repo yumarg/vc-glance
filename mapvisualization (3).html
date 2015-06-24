@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<head lang="en">
+<meta charset="utf-8">
+<title>MAP</title>
+<script src="jquery.js"></script>
+<link rel="stylesheet" type="text/css" href="mapvisualization.css">
+<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+<script type="text/javascript" src="nicescroll.min.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=false"></script>
+</head>
+<body>
+
+	<div id="map"></div>
+	<div id="locations"></div>
+
+	<script>
+
+	var map = L.map('map').setView([42.3598, -71.0921], 5);
+
+	L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png?{foo}', {foo: 'bar'}).addTo(map);	
+
+	// L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png', {
+	// 	maxZoom: 18,
+	// 	attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+	// 		'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+	// 		'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+	// 	id: 'examples.map-i875mjb7'
+	// }).addTo(map);		
+
+	
+	var geocoder;
+  function initialize() {
+    geocoder = new google.maps.Geocoder();     
+  }		  
+
+	function makeReadable(str) {
+		if (str == "U.S.") {
+			return "United States";
+		}
+	  return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+	}
+
+	var masterlist = [];
+	function getCountriesCities() {
+		$.ajax({
+			method: 'GET',
+			url: 'countries2cities.json',
+			dataType: 'json',
+			success: function(data) {
+				for (var key in data) {
+					if (data.hasOwnProperty(key)) {
+						masterlist.push(key);
+						for (k = 0; k < data[key].length; k++) {
+							masterlist.push(data[key][k]);
+						}
+					}
+				}					
+				InfoFromFeed.getData();
+			}
+		});
+	}
+
+	var InfoFromFeed = (function() {
+		var ul;
+		function getInfoFromFeed() {
+			$.ajax({
+				method: 'GET',
+				url: 'feed.txt',
+				dataType: 'json',
+				success: function(data) {				
+					$("#locations").append("<p style='font-weight: bold; color: #126180; font-size: 20px; margin-bottom: 10px'>LOCATIONS</p>");
+		    	for (i = 0; i < data.posts.length; i++) {
+		      	if (data.posts[i].locations.length != 0) {
+		        	ul = document.createElement("ul");
+		        	ul.id = i.toString();
+		        	ul.className = "group";
+		        	$("#locations").append(ul);
+			        $("#locations #" + ul.id).append("<li class = 'clickable articles' style='font-weight: bold; margin-bottom: 5px'>" + data.posts[i].title + "</li>");
+			        for (j = 0; j < data.posts[i].locations.length; j++) {
+			        	if (masterlist.indexOf(makeReadable(data.posts[i].locations[j])) > -1) {
+		      				$("#locations #" + ul.id).append("<li class='clickablee points'>" + makeReadable(data.posts[i].locations[j]) + "</li>");
+			        	}
+				        if (j == (data.posts[i].locations.length - 1)) {
+				        	$("#locations #" + ul.id).append("<br>");
+				        }			        	
+			        }
+		      	}
+		      }  		      		
+		      var allpoints = document.getElementsByClassName('points');
+		      for (var i = 0; i < allpoints.length; i++) {
+						var latlng = [];
+						var alllocations = [];		      
+						thispoint = allpoints[i];
+					  thispoint.id = "point"+i.toString();	
+		      	function getAddress(thispoint) {setTimeout(function () {
+					    geocoder.geocode( { 'address': thispoint.innerHTML}, function(results, status) {
+					      if (status == google.maps.GeocoderStatus.OK) {
+					      	latlng = [];
+									lat = results[0].geometry.location.lat().toFixed(6);
+									lng = results[0].geometry.location.lng().toFixed(6);
+									latlng.push(lat);
+									latlng.push(lng);
+									if (!(alllocations.indexOf(thispoint.innerHTML) > -1)) {
+										alllocations.push(thispoint.innerHTML);
+								  	var newMarker = new L.marker(latlng).addTo(map);
+								  	newMarker.bindPopup(thispoint.innerHTML);
+								    newMarker.on('mouseover', function (e) {
+								      this.openPopup();
+								    });
+								    newMarker.on('mouseout', function (e) {
+								      this.closePopup();
+								    });
+								  }
+									$("#" + thispoint.id).attr("data-position", latlng[0]+", "+latlng[1]);   
+									thispoint.onclick = function(e) {
+									  var position = e.target.getAttribute('data-position');
+									  if (position) {
+									    map.setView(new L.LatLng(position.split(',')[0], position.split(',')[1]), 8, {
+									      animation: true
+									    });
+									  }
+									};  											
+					      }
+					    });
+					  }, i*1000);}
+						getAddress(thispoint);
+		      }
+		      // var alluls;
+		      // alluls = document.getElementsByClassName('group');
+		      // for (var i = 0; i < alluls.length; i++) {
+		      // 	thisul = alluls[i];
+		      // 	var latlngsinul = [];
+		      // 	for (var j = 0; j < thisul.getElementsByClassName('points').length; j++) {
+		      // 		latlngsinul.push(thisul.getElementsByClassName('points')[j].getAttribute('data-position'));
+		      // 	}
+		      // 	var polyline = L.polyline(latlngsinul, {color: '#1fa2d6'}).addTo(map);
+		      // 	thisul.childNodes[1].onclick = map.fitBounds(polyline.getBounds());
+		      // }
+				}
+			});
+		}
+		return {
+			getData: function() {
+				getInfoFromFeed(function(data){});				
+			}
+		}
+	})();
+
+	$(document).ready(function() {
+		initialize();
+		getCountriesCities();
+		$("#locations").niceScroll({mousescrollstep:40, hidecursordelay: 200, scrollspeed: 40, cursorwidth: 7, cursorcolor: "#157195", cursoropacitymax: .7, cursoropacitymin: .3});
+	});
+	</script>
+</body>
+</html>
