@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<head lang="en">
+<meta charset="utf-8">
+<title>M A P</title>
+<script src="jquery.js"></script>
+<link rel="stylesheet" type="text/css" href="mapviz (9).css">
+<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css">
+<link rel="stylesheet" href="http://leaflet.github.io/Leaflet.label/leaflet.label.css">
+<script type="text/javascript" src="nicescroll.min.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=false"></script>
+<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+<script type="text/javascript" src="http://leaflet.github.io/Leaflet.label/leaflet.label.js"></script>
+</head>
+<body>
+
+	<div id="map"></div>
+	<div id="locations"></div>
+
+	<script type="text/javascript">
+
+	L.Map = L.Map.extend({
+	    openPopup: function(popup) {
+	        //        this.closePopup();
+	        this._popup = popup;
+
+	        return this.addLayer(popup).fire('popupopen', {
+	            popup: this._popup
+	        });
+	    }
+	});	
+
+	var map = L.map('map').setView([15, -5], 2);
+	map.attributionControl.setPrefix('');
+
+	L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png?{foo}', {foo: 'bar'}).addTo(map);
+	
+	var geocoder;
+  function initialize() {
+    geocoder = new google.maps.Geocoder();
+    console.log("geocoder initialized");
+  }		  
+
+	function makeReadable(str) {
+		if ( (str == "U.S.") || (str == "America") ) {
+			return "United States"
+		}
+		if ( (str == "England") || (str == "Great Britain") || (str == "Scotland") || (str == "Wales") ) {
+			return "United Kingdom"
+		}
+		else {
+	  	return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();})
+	  }
+	}
+
+	function hidePopups() {
+  	for (var marker = 0; marker < document.getElementsByClassName('points').length; marker++) {
+  		if (document.getElementsByClassName('points')[marker].dataset.leafletmarker) {
+  			allMarkers[parseInt(document.getElementsByClassName('points')[marker].dataset.leafletmarker)].closePopup();
+  		}
+  	}								      		
+	}
+
+	function articleHasLocations(article) {
+		return (article.locations.length != 0)
+	}
+
+	function getValidLocations(article) {
+		var locs = article.locations;
+		var validLocations = [];
+		$.each(locs, function(locIndex, loc) {
+			if ( (masterList.indexOf(makeReadable(loc)) > -1) && (validLocations.indexOf(makeReadable(loc)) == -1) && (NonUSorganizations.indexOf(makeReadable(loc)) == -1) ) {
+				validLocations.push(makeReadable(loc));
+			}
+		});
+		return validLocations;
+	}
+
+	function createLocationsList(locations, aCounter, pCounter, article) {
+		$("#locations").append("<ul class='group' id=article"+aCounter+"></ul>");
+		var thisArticle = $("#article"+aCounter);
+		thisArticle.append("<li class='clickable article' style='font-weight: bold; margin-bottom: 5px'>"+article.title+"</li>");	
+		for (var locIndex = 0; locIndex < locations.length; locIndex++) {
+			thisArticle.append("<li class='clickablee point' id="+pCounter+">"+makeReadable(locations[locIndex])+"</li>");
+			pCounter++;
+			if (locIndex == (locations.length-1) ) {
+				thisArticle.append("<br>");
+				var locationsInArticle = $(thisArticle).children(".point").toArray();
+				disambiguate(article, locationsInArticle);
+			}
+		}
+	}
+
+	function disambiguate(article, locationsInArticle) {
+		for (var loc = 0; loc < locationsInArticle.length; loc++) {
+			var thisLoc = locationsInArticle[loc];
+			var articleOrganizations = article.organizations;
+			var locationToUse;
+  		for (var location = 0; location < thisLoc.parentNode.getElementsByClassName('point').length; location++) { //for each location in article
+  			var theLocation = thisLoc.parentNode.getElementsByClassName('point')[location].innerHTML;
+  			if (countries.indexOf(theLocation) > -1) {
+  				locationToUse = thisLoc.innerHTML;
+  			}
+  			else if (countries.indexOf(theLocation) == -1) {
+    			if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) == -1) ) {
+    				locationToUse = thisLoc.innerHTML;
+    			}
+    			else if ( (citiesNotInUS.indexOf(theLocation) == -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
+    				locationToUse = thisLoc.innerHTML + ', United States';
+    			}
+    			else if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
+    				NonUSOrgcount = 0;
+    				if (articleOrganizations.length != 0) {
+      				for (var org = 0; org < articleOrganizations.length; org++) {
+      					if (NonUSorganizations.indexOf(articleOrganizations[org]) > -1) {
+      						NonUSOrgcount += 1;
+      					}
+      				}
+      				if (NonUSOrgcount == 0) {
+      					locationToUse = thisLoc.innerHTML + ', United States';
+      				}
+      				else if (NonUSOrgcount > 0) {
+      					locationToUse = thisLoc.innerHTML;
+      				}
+      			}
+      			else {
+      				locationToUse = thisLoc.innerHTML;
+      			}
+    			}
+    		}
+  		}
+  		if (locationToUse == "United States, United States") {
+  			locationToUse = "United States";
+  		}
+  		thisLoc.dataset.loc = locationToUse;
+  		console.log(thisLoc.dataset.loc);
+  	}
+	}
+
+	var masterList = [];
+	var countries = [];
+	var citiesInUS = [];
+	var citiesNotInUS = [];
+	var NonUSorganizations = ["European Union", "Islamic State", "E.U.", "The British Foreign Office", "The Times of London", "Muslim Brotherhood", "Hamas", "Hezbollah", "European Council", "European Commission", "European Central Bank", "Syrian Observatory for Human Rights", "Atlantic"];
+	function getCountriesCities() {
+		$.ajax({
+			method: 'GET',
+			url: 'countries2cities.json',
+			dataType: 'json',
+			success: function(data) {
+				for (var key in data) {
+					if (data.hasOwnProperty(key)) {
+						masterList.push(key);
+						countries.push(key);
+						for (var k = 0; k < data[key].length; k++) {
+							masterList.push(data[key][k]);
+						}
+						if (key == "United States") {
+							for (var m = 0; m < data[key].length; m++) {
+								citiesInUS.push(data[key][m]);
+							}
+						}
+						if (key != "United States") {
+							for (var n = 0; n < data[key].length; n++) {
+								citiesNotInUS.push(data[key][n]);
+							}
+						}
+					}
+				}					
+				InfoFromFeed.getData();
+			}
+		});
+	}
+
+	var InfoFromFeed = (function() {
+		function getInfoFromFeed() {
+			$.ajax({
+				method: 'GET',
+				url: 'feed.txt',
+				dataType: 'json',
+				success: function(data) {
+
+					$("#locations").append("<p id='locationsp' style='font-weight: bold; color: #126180; font-size: 20px; margin-bottom: 10px'>LOCATIONS</p>");
+					$("#locationsp").click(function() {
+						hidePopups();
+						map.setView(new L.LatLng(15, -5), 2, {
+				      animation: true
+				    });
+					});
+
+					var aCounter = 0;
+					var pCounter = 0;
+					var allArticles = data.posts;
+					$.each(allArticles, function(articleIndex, article) {
+						if (articleHasLocations(article) == true) {
+							var locations = getValidLocations(article);
+							createLocationsList(locations, aCounter, pCounter, article);
+							aCounter++;
+						}
+					});
+				}
+			});
+		}
+		return {
+			getData: function() {
+				getInfoFromFeed(function(data){});				
+			}
+		}				
+	})();
+
+	$(document).ready(function() {
+		initialize();
+		getCountriesCities();
+		$("#locations").niceScroll({mousescrollstep:40, hidecursordelay: 200, scrollspeed: 40, cursorwidth: 7, cursorcolor: "#157195", cursoropacitymax: .7, cursoropacitymin: .3});
+	});
+
+	</script>
+
+</body>
+</html>	
