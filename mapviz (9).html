@@ -72,22 +72,22 @@
 				validLocations.push(makeReadable(loc));
 			}
 		});
-		return validLocations;
+		return validLocations
 	}
 
 	function createLocationsList(locations, aCounter, pCounter, article) {
 		$("#locations").append("<ul class='group' id=article"+aCounter+"></ul>");
 		var thisArticle = $("#article"+aCounter);
-		thisArticle.append("<li class='clickable article' style='font-weight: bold; margin-bottom: 5px'>"+article.title+"</li>");	
-		for (var locIndex = 0; locIndex < locations.length; locIndex++) {
-			thisArticle.append("<li class='clickablee point' id="+pCounter+">"+makeReadable(locations[locIndex])+"</li>");
+		thisArticle.append("<li class='clickable article' style='font-weight: bold; margin-bottom: 5px'>"+article.title+"</li>");
+		$.each(locations, function(locIndex, location) {
+			thisArticle.append("<li class='clickablee point' id="+pCounter+">"+makeReadable(location)+"</li>");
 			pCounter++;
-			if (locIndex == (locations.length-1) ) {
+			if (locIndex == locations.length-1) {
 				thisArticle.append("<br>");
 				var locationsInArticle = $(thisArticle).children(".point").toArray();
 				disambiguate(article, locationsInArticle);
 			}
-		}
+		});
 	}
 
 	function disambiguate(article, locationsInArticle) {
@@ -132,8 +132,118 @@
   			locationToUse = "United States";
   		}
   		thisLoc.dataset.loc = locationToUse;
-  		console.log(thisLoc.dataset.loc);
-  	}
+  	}	
+  }
+
+	// function disambiguate(article, locationsInArticle) {
+	// 	var thisLoc = locationsInArticle[locIndex];
+	// 	var articleOrganizations = article.organizations;
+	// 	var locationToUse;
+	// 	var theLocation = thisLoc.parentNode.getElementsByClassName('point')[loc].innerHTML;
+	// 	if (countries.indexOf(theLocation) > -1) {
+	// 		locationToUse = thisLoc.innerHTML;
+	// 	}
+	// 	else if (countries.indexOf(theLocation) == -1) {
+ // 			if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) == -1) ) {
+ // 				locationToUse = thisLoc.innerHTML;
+ // 			}
+ // 			else if ( (citiesNotInUS.indexOf(theLocation) == -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
+ // 				locationToUse = thisLoc.innerHTML + ', United States';
+ // 			}
+ // 			else if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
+ // 				NonUSOrgcount = 0;
+ // 				if (articleOrganizations.length != 0) {
+ //   				for (var org = 0; org < articleOrganizations.length; org++) {
+ //   					if (NonUSorganizations.indexOf(articleOrganizations[org]) > -1) {
+ //   						NonUSOrgcount += 1;
+ //   					}
+ //   				}
+ //   				if (NonUSOrgcount == 0) {
+ //   					locationToUse = thisLoc.innerHTML + ', United States';
+ //   				}
+ //   				else if (NonUSOrgcount > 0) {
+ //   					locationToUse = thisLoc.innerHTML;
+ //   				}
+ //   			}
+ //   			else {
+ //   				locationToUse = thisLoc.innerHTML;
+ //   			}
+ // 			}
+ // 		}
+ // 		if (locationToUse == "United States, United States") {
+ // 			locationToUse = "United States";
+ // 		}
+ // 		thisLoc.dataset.loc = locationToUse;
+ // 		//console.log(thisLoc.dataset.loc);
+	// } 	
+
+	function geocodeLocations(aCounter, allMarkers) {
+		var locations = $("#article"+aCounter).children(".point").toArray();
+		var locationIndex = 0;
+		var location = locations[locationIndex];
+		function geocodeLocationAt(location, locationIndex, allMarkers) {
+			if (location !== undefined) {
+				geocodeLocation(location, allMarkers, function(status){
+				  if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT){
+					  console.log('status is over limit');
+					  setTimeout(function(){geocodeLocationAt(location, locationIndex, allMarkers);},1000);
+				  }
+				  else if (status == google.maps.GeocoderStatus.OK) {
+				  	console.log('status is ok');
+				 	  locationIndex++;
+				 	  location = locations[locationIndex];
+					  setTimeout(function(){geocodeLocationAt(location, locationIndex, allMarkers);},500);
+				  }
+			  });
+			}
+		}
+		geocodeLocationAt(location, locationIndex, allMarkers);
+	}
+
+	function geocodeLocation(location, allMarkers, callback) {
+		geocoder.geocode({'address': location.dataset.loc}, function(results, status) {
+			if (status == google.maps.GeocoderStatus.OK) {
+				latlng = [];
+				lat = results[0].geometry.location.lat().toFixed(6);
+				lng = results[0].geometry.location.lng().toFixed(6);
+				latlng.push(lat);
+				latlng.push(lng);
+				location.dataset.position = latlng[0] + "," + latlng[1];
+				var newMarker = new L.marker(latlng).addTo(map).bindPopup(location.innerHTML);
+				allMarkers.push(newMarker);
+				newMarker.on('mouseover', function (e) {
+					this.openPopup();
+				});
+				newMarker.on('mouseout', function (e) {
+					this.closePopup();
+				});
+				location.onclick = function (e) {
+					hidePopups();
+					map.addLayer(newMarker);
+					allMarkers[parseInt(e.target.id)].openPopup();
+					var Position = e.target.dataset.position;
+					if (Position) {
+						map.setView(new L.LatLng(parseFloat(Position.split(',')[0]), parseFloat(Position.split(',')[1])), 8, {
+							animation: true
+						});
+					}
+				};
+				callback(status);
+			}
+			else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+				callback(status);
+			}
+		});
+	}
+
+	function getArticles(data) {
+		var articles = [];
+		$.each(data.posts, function(aIndex, article) {
+			if (article.locations.length !== 0) {
+				articles.push(article);
+			}
+		});
+		return articles
 	}
 
 	var masterList = [];
@@ -187,15 +297,37 @@
 				    });
 					});
 
+					// var allArticles = getArticles(data);
+					// var pCounter = 0;
+
+					// $.each(allArticles, function(articleIndex, article) {
+					// 	locations = getValidLocations(article);
+					// 	$.when(createLocationsList(articleIndex, article, locations, pCounter)).then(geocodeLocations(articleIndex)).then(function() {pCounter+=locations.length});
+					// });
+
+					// for (var a = 0; a < allArticles.length; a++) {
+					// 	(function(index) {
+					// 		var aIndex = 0;
+
+					// 		$.when(createLocationsList(aIndex)).then(geocodeLocations(aIndex)).then(function(aIndex) {index++;});
+
+					// 	})(articleIndex);				
+					// }
+
 					var aCounter = 0;
 					var pCounter = 0;
 					var allArticles = data.posts;
+					var allMarkers = [];
 					$.each(allArticles, function(articleIndex, article) {
-						if (articleHasLocations(article) == true) {
-							var locations = getValidLocations(article);
-							createLocationsList(locations, aCounter, pCounter, article);
-							aCounter++;
-						}
+						(function(articleIndex) {
+							if (articleHasLocations(article) == true) {
+								var locations = getValidLocations(article);
+								createLocationsList(locations, aCounter, pCounter, article);
+								geocodeLocations(aCounter, allMarkers);
+								aCounter++;
+								pCounter+=locations.length;
+							}
+						})(aCounter);
 					});
 				}
 			});
