@@ -44,18 +44,15 @@
 		if ( (str == "U.S.") || (str == "America") ) {
 			return "United States"
 		}
-		if ( (str == "England") || (str == "Great Britain") || (str == "Scotland") || (str == "Wales") ) {
-			return "United Kingdom"
-		}
 		else {
 	  	return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();})
 	  }
 	}
 
-	function hidePopups() {
-  	for (var marker = 0; marker < document.getElementsByClassName('points').length; marker++) {
-  		if (document.getElementsByClassName('points')[marker].dataset.leafletmarker) {
-  			allMarkers[parseInt(document.getElementsByClassName('points')[marker].dataset.leafletmarker)].closePopup();
+	function hidePopups(allMarkers) {
+  	for (var marker = 0; marker < document.getElementsByClassName('point').length; marker++) {
+  		if (document.getElementsByClassName('point')[marker].dataset.marker != undefined) {
+  			allMarkers[parseInt(document.getElementsByClassName('point')[marker].dataset.marker)].closePopup();
   		}
   	}								      		
 	}
@@ -75,9 +72,9 @@
 		return validLocations
 	}
 
-	function createLocationsList(locations, aCounter, pCounter, article) {
-		$("#locations").append("<ul class='group' id=article"+aCounter+"></ul>");
-		var thisArticle = $("#article"+aCounter);
+	function createLocationsList(locations, aIndex, pCounter, article) {
+		$("#locations").append("<ul class='group' id=article"+aIndex+"></ul>");
+		var thisArticle = $("#article"+aIndex);
 		thisArticle.append("<li class='clickable article' style='font-weight: bold; margin-bottom: 5px'>"+article.title+"</li>");
 		$.each(locations, function(locIndex, location) {
 			thisArticle.append("<li class='clickablee point' id="+pCounter+">"+makeReadable(location)+"</li>");
@@ -91,126 +88,100 @@
 	}
 
 	function disambiguate(article, locationsInArticle) {
-		for (var loc = 0; loc < locationsInArticle.length; loc++) {
-			var thisLoc = locationsInArticle[loc];
+		$.each(locationsInArticle, function(locCounter, thisLoc) {
 			var articleOrganizations = article.organizations;
+			var theLocation = thisLoc.innerHTML;
 			var locationToUse;
-  		for (var location = 0; location < thisLoc.parentNode.getElementsByClassName('point').length; location++) { //for each location in article
-  			var theLocation = thisLoc.parentNode.getElementsByClassName('point')[location].innerHTML;
-  			if (countries.indexOf(theLocation) > -1) {
-  				locationToUse = thisLoc.innerHTML;
-  			}
-  			else if (countries.indexOf(theLocation) == -1) {
-    			if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) == -1) ) {
-    				locationToUse = thisLoc.innerHTML;
-    			}
-    			else if ( (citiesNotInUS.indexOf(theLocation) == -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
-    				locationToUse = thisLoc.innerHTML + ', United States';
-    			}
-    			else if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
-    				NonUSOrgcount = 0;
-    				if (articleOrganizations.length != 0) {
-      				for (var org = 0; org < articleOrganizations.length; org++) {
-      					if (NonUSorganizations.indexOf(articleOrganizations[org]) > -1) {
-      						NonUSOrgcount += 1;
-      					}
-      				}
-      				if (NonUSOrgcount == 0) {
-      					locationToUse = thisLoc.innerHTML + ', United States';
-      				}
-      				else if (NonUSOrgcount > 0) {
-      					locationToUse = thisLoc.innerHTML;
-      				}
-      			}
-      			else {
-      				locationToUse = thisLoc.innerHTML;
-      			}
-    			}
-    		}
+  		if ( ( (foreignPlaces.indexOf(theLocation) > -1) && (USPlaces.indexOf(theLocation) == -1) ) || (countries.indexOf(theLocation) > -1) ) {
+  			locationToUse = theLocation;
   		}
-  		if (locationToUse == "United States, United States") {
-  			locationToUse = "United States";
+			else if ( (foreignPlaces.indexOf(theLocation) == -1) && (USPlaces.indexOf(theLocation) > -1) ) {
+  				locationToUse = theLocation + ', United States';
+			}
+			else if ( (foreignPlaces.indexOf(theLocation) > -1) && (USPlaces.indexOf(theLocation) > -1) ) {
+				NonUSOrgcount = 0;
+				if (articleOrganizations.length != 0) {
+  				for (var org = 0; org < articleOrganizations.length; org++) {
+  					if (NonUSorganizations.indexOf(articleOrganizations[org]) > -1) {
+  						NonUSOrgcount += 1;
+  					}
+  				}
+  				if (NonUSOrgcount == 0) {
+  					locationToUse = theLocation + ', United States';
+  				}
+  				else if (NonUSOrgcount > 0) {
+  					locationToUse = theLocation;
+  				}
+  			}
+  			else {
+  				locationToUse = theLocation;
+  			}
   		}
   		thisLoc.dataset.loc = locationToUse;
-  	}	
+  	});
   }
 
-	// function disambiguate(article, locationsInArticle) {
-	// 	var thisLoc = locationsInArticle[locIndex];
-	// 	var articleOrganizations = article.organizations;
-	// 	var locationToUse;
-	// 	var theLocation = thisLoc.parentNode.getElementsByClassName('point')[loc].innerHTML;
-	// 	if (countries.indexOf(theLocation) > -1) {
-	// 		locationToUse = thisLoc.innerHTML;
-	// 	}
-	// 	else if (countries.indexOf(theLocation) == -1) {
- // 			if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) == -1) ) {
- // 				locationToUse = thisLoc.innerHTML;
- // 			}
- // 			else if ( (citiesNotInUS.indexOf(theLocation) == -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
- // 				locationToUse = thisLoc.innerHTML + ', United States';
- // 			}
- // 			else if ( (citiesNotInUS.indexOf(theLocation) > -1) && (citiesInUS.indexOf(theLocation) > -1) ) {
- // 				NonUSOrgcount = 0;
- // 				if (articleOrganizations.length != 0) {
- //   				for (var org = 0; org < articleOrganizations.length; org++) {
- //   					if (NonUSorganizations.indexOf(articleOrganizations[org]) > -1) {
- //   						NonUSOrgcount += 1;
- //   					}
- //   				}
- //   				if (NonUSOrgcount == 0) {
- //   					locationToUse = thisLoc.innerHTML + ', United States';
- //   				}
- //   				else if (NonUSOrgcount > 0) {
- //   					locationToUse = thisLoc.innerHTML;
- //   				}
- //   			}
- //   			else {
- //   				locationToUse = thisLoc.innerHTML;
- //   			}
- // 			}
- // 		}
- // 		if (locationToUse == "United States, United States") {
- // 			locationToUse = "United States";
- // 		}
- // 		thisLoc.dataset.loc = locationToUse;
- // 		//console.log(thisLoc.dataset.loc);
-	// } 	
-
-	function geocodeLocations(aCounter, allMarkers) {
-		var locations = $("#article"+aCounter).children(".point").toArray();
+	function geocodeLocations(counter, aIndex, allMarkers) {
+		var locations = $("#article"+aIndex).children(".point").toArray();
 		var locationIndex = 0;
 		var location = locations[locationIndex];
-		function geocodeLocationAt(location, locationIndex, allMarkers) {
-			if (location !== undefined) {
-				geocodeLocation(location, allMarkers, function(status){
-				  if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT){
-					  console.log('status is over limit');
-					  setTimeout(function(){geocodeLocationAt(location, locationIndex, allMarkers);},1000);
-				  }
-				  else if (status == google.maps.GeocoderStatus.OK) {
-				  	console.log('status is ok');
-				 	  locationIndex++;
-				 	  location = locations[locationIndex];
-					  setTimeout(function(){geocodeLocationAt(location, locationIndex, allMarkers);},500);
-				  }
-			  });
+		function getTimeLag(aIndex, locationIndex) {
+			if (aIndex == 0) {
+				if (locationIndex == 0) {
+					return 200;
+				}
+				else if (locationIndex == locations.length-1) {
+					return 200;
+				}
+				else
+					return locationIndex*20;				
+			}
+			else {
+				if (locationIndex == 0) {
+					return 200;
+				}
+				else if (locationIndex == locations.length-1) {
+					return aIndex*200;
+				}
+				else
+					return locationIndex*20;
 			}
 		}
-		geocodeLocationAt(location, locationIndex, allMarkers);
+		function geocodeLocationAt(counter, location, locationIndex, allMarkers) {
+			if (location !== undefined) {
+				geocodeLocation(counter, location, allMarkers, function(status){
+				  if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+					  setTimeout(function() {
+					  	geocodeLocationAt(counter, location, locationIndex, allMarkers);
+					  }, getTimeLag(aIndex, locationIndex));
+				  }
+				  else if (status == google.maps.GeocoderStatus.OK) {
+				  	locationIndex++;
+				  	location = locations[locationIndex];
+					  setTimeout(function() {
+					  	geocodeLocationAt(counter, location, locationIndex, allMarkers); 
+				 	  }, getTimeLag(aIndex, locationIndex));
+				  }
+				});
+			}
+		}
+		geocodeLocationAt(counter, location, locationIndex, allMarkers);
 	}
 
-	function geocodeLocation(location, allMarkers, callback) {
+	function geocodeLocation(counter, location, allMarkers, callback) {
 		geocoder.geocode({'address': location.dataset.loc}, function(results, status) {
 			if (status == google.maps.GeocoderStatus.OK) {
+				//console.log("ok");
 				latlng = [];
 				lat = results[0].geometry.location.lat().toFixed(6);
 				lng = results[0].geometry.location.lng().toFixed(6);
 				latlng.push(lat);
 				latlng.push(lng);
 				location.dataset.position = latlng[0] + "," + latlng[1];
+				console.log(location.id + " | " + location.dataset.loc + ": " + latlng[0] + ", " + latlng[1]);
 				var newMarker = new L.marker(latlng).addTo(map).bindPopup(location.innerHTML);
 				allMarkers.push(newMarker);
+				location.dataset.marker = allMarkers.indexOf(newMarker);
 				newMarker.on('mouseover', function (e) {
 					this.openPopup();
 				});
@@ -218,9 +189,9 @@
 					this.closePopup();
 				});
 				location.onclick = function (e) {
-					hidePopups();
+					hidePopups(allMarkers);
 					map.addLayer(newMarker);
-					allMarkers[parseInt(e.target.id)].openPopup();
+					allMarkers[parseInt(e.target.dataset.marker)].openPopup();
 					var Position = e.target.dataset.position;
 					if (Position) {
 						map.setView(new L.LatLng(parseFloat(Position.split(',')[0]), parseFloat(Position.split(',')[1])), 8, {
@@ -228,9 +199,72 @@
 						});
 					}
 				};
+				function drawPolyLines() {
+					var articleULs = document.getElementsByClassName('group');
+					$.each(articleULs, function(ulIndex, ul) {
+						thisul = ul.querySelectorAll('.article')[0];
+						var points = ul.querySelectorAll('.point');
+						var LatLngsInUl = [];
+						var polylineArray = [];
+						var markersArray = [];
+						$.each(points, function(pointIndex, point) {
+		      		if (point.dataset.position) {
+			      		lat = parseFloat(point.dataset.position.split(",")[0]);
+			      		lng = parseFloat(point.dataset.position.split(",")[1]);
+								LatLngsInUl.push([lat, lng]);
+							}					
+							if (point.dataset.marker) {
+								markersArray.push(parseInt(point.dataset.marker));
+							}		
+						});
+		      	for (var m = 0; m < LatLngsInUl.length; m++) { //for each pair of lat, lngs in article
+		      		polylineArray.push(LatLngsInUl[m]);
+
+		      	}							    	
+						var color = (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256));
+		      	var drawpolyline = (L.polyline(polylineArray, {color: 'rgb(' + color + ')', weight: 3, opacity: 0.6})).bindLabel(thisul.innerHTML).addTo(map);
+						polylineArrayToUse = JSON.stringify(polylineArray);
+						document.getElementById(thisul.parentNode.id).dataset.polyline = polylineArrayToUse;
+						document.getElementById(thisul.parentNode.id).dataset.color = color;
+						document.getElementById(thisul.parentNode.id).dataset.markers = JSON.stringify(markersArray);
+			      thisul.onclick = function(e) {
+							map.setView(new L.LatLng(15, -5), 2, {
+					      animation: true
+					    });							      	
+			      	hidePopups(allMarkers);
+			      	var Polyline = JSON.parse(e.target.parentNode.dataset.polyline);
+			      	var Markers = JSON.parse(e.target.parentNode.dataset.markers);
+			      	var Color = e.target.parentNode.dataset.color;
+			      	setTimeout(function() {	      	
+				      	if (Markers) {
+				      		function drawMarkers(allMarkers) {
+						      	for (var s = 0; s < Markers.length; s++) { //for each marker in article
+						      		allMarkers[parseInt(Markers[s])].openPopup();
+						      	}
+						      }
+				      		drawMarkers(allMarkers);				      
+				      		newpolyline = (L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 8, opacity: 1})).bindLabel(e.target.innerHTML).addTo(map);
+			      			map.fitBounds(newpolyline.getBounds());
+				      		setTimeout(function() {map.removeLayer(newpolyline);}, 800);
+				      		setTimeout(function() {
+					      		newpolyline = (L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 8, opacity: 1})).bindLabel(e.target.innerHTML).addTo(map);
+				      			map.fitBounds(newpolyline.getBounds());
+					      		setTimeout(function() {map.removeLayer(newpolyline);}, 800);
+				      		}, 1600);
+				      	}
+				      }, 800);	
+				    };
+					});
+				}				
+				counter.push('');
+				console.log(counter.length);		
+				if (counter.length === 73) {
+					drawPolyLines();
+				}
 				callback(status);
 			}
 			else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+				//console.log("overy query limit");
 				callback(status);
 			}
 		});
@@ -248,8 +282,8 @@
 
 	var masterList = [];
 	var countries = [];
-	var citiesInUS = [];
-	var citiesNotInUS = [];
+	var USPlaces = [];
+	var foreignPlaces = [];
 	var NonUSorganizations = ["European Union", "Islamic State", "E.U.", "The British Foreign Office", "The Times of London", "Muslim Brotherhood", "Hamas", "Hezbollah", "European Council", "European Commission", "European Central Bank", "Syrian Observatory for Human Rights", "Atlantic"];
 	function getCountriesCities() {
 		$.ajax({
@@ -257,6 +291,9 @@
 			url: 'countries2cities.json',
 			dataType: 'json',
 			success: function(data) {
+				countries.push("England");
+				countries.push("Scotland");
+				countries.push("Wales");
 				for (var key in data) {
 					if (data.hasOwnProperty(key)) {
 						masterList.push(key);
@@ -266,12 +303,13 @@
 						}
 						if (key == "United States") {
 							for (var m = 0; m < data[key].length; m++) {
-								citiesInUS.push(data[key][m]);
+								USPlaces.push(data[key][m]);
 							}
 						}
 						if (key != "United States") {
 							for (var n = 0; n < data[key].length; n++) {
-								citiesNotInUS.push(data[key][n]);
+								foreignPlaces.push(data[key]);
+								foreignPlaces.push(data[key][n]);
 							}
 						}
 					}
@@ -291,19 +329,25 @@
 
 					$("#locations").append("<p id='locationsp' style='font-weight: bold; color: #126180; font-size: 20px; margin-bottom: 10px'>LOCATIONS</p>");
 					$("#locationsp").click(function() {
-						hidePopups();
+						hidePopups(allMarkers);
 						map.setView(new L.LatLng(15, -5), 2, {
 				      animation: true
 				    });
 					});
 
-					// var allArticles = getArticles(data);
-					// var pCounter = 0;
+					var allArticles = getArticles(data);
+					var pCounter = 0;
+					var allMarkers = [];
+					var counter = [];
 
-					// $.each(allArticles, function(articleIndex, article) {
-					// 	locations = getValidLocations(article);
-					// 	$.when(createLocationsList(articleIndex, article, locations, pCounter)).then(geocodeLocations(articleIndex)).then(function() {pCounter+=locations.length});
-					// });
+					function drawMarkers() {
+						$.each(allArticles, function(articleIndex, article) {
+							locations = getValidLocations(article);
+							$.when(createLocationsList(locations, articleIndex, pCounter, article)).then(geocodeLocations(counter, articleIndex, allMarkers)).then(function() {pCounter+=locations.length});							
+						});		
+					}
+
+					drawMarkers();
 
 					// for (var a = 0; a < allArticles.length; a++) {
 					// 	(function(index) {
@@ -314,21 +358,21 @@
 					// 	})(articleIndex);				
 					// }
 
-					var aCounter = 0;
-					var pCounter = 0;
-					var allArticles = data.posts;
-					var allMarkers = [];
-					$.each(allArticles, function(articleIndex, article) {
-						(function(articleIndex) {
-							if (articleHasLocations(article) == true) {
-								var locations = getValidLocations(article);
-								createLocationsList(locations, aCounter, pCounter, article);
-								geocodeLocations(aCounter, allMarkers);
-								aCounter++;
-								pCounter+=locations.length;
-							}
-						})(aCounter);
-					});
+					// var aCounter = 0;
+					// var pCounter = 0;
+					// var allArticles = data.posts;
+					// var allMarkers = [];
+					// $.each(allArticles, function(articleIndex, article) {
+					// 	(function(articleIndex) {
+					// 		if (articleHasLocations(article) == true) {
+					// 			var locations = getValidLocations(article);
+					// 			createLocationsList(locations, aCounter, pCounter, article);
+					// 			geocodeLocations(aCounter, allMarkers);
+					// 			aCounter++;
+					// 			pCounter+=locations.length;
+					// 		}
+					// 	})(aCounter);
+					// });
 				}
 			});
 		}
