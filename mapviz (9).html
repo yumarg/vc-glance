@@ -42,10 +42,10 @@
 
 	function makeReadable(str) {
 		if ( (str == "U.S.") || (str == "America") ) {
-			return "United States"
+			return "United States";
 		}
 		else {
-	  	return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();})
+	  	return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 	  }
 	}
 
@@ -58,7 +58,7 @@
 	}
 
 	function articleHasLocations(article) {
-		return (article.locations.length != 0)
+		return (article.locations.length != 0);
 	}
 
 	function getValidLocations(article) {
@@ -69,7 +69,7 @@
 				validLocations.push(makeReadable(loc));
 			}
 		});
-		return validLocations
+		return validLocations;
 	}
 
 	function createLocationsList(locations, aIndex, pCounter, article) {
@@ -121,64 +121,48 @@
   	});
   }
 
-	function geocodeLocations(counter, aIndex, allMarkers) {
+	function geocodeLocations(counter, aIndex, allMarkers, allPolylines) {
 		var locations = $("#article"+aIndex).children(".point").toArray();
 		var locationIndex = 0;
 		var location = locations[locationIndex];
-		function getTimeLag(aIndex, locationIndex) {
-			if (aIndex == 0) {
-				if (locationIndex == 0) {
-					return 200;
-				}
-				else if (locationIndex == locations.length-1) {
-					return 200;
-				}
-				else
-					return locationIndex*20;				
+		function getTimeLag(counter, locationIndex) {
+			if (counter % 5 == 0) {
+				return 50+locationIndex;
 			}
 			else {
-				if (locationIndex == 0) {
-					return 200;
-				}
-				else if (locationIndex == locations.length-1) {
-					return aIndex*200;
-				}
-				else
-					return locationIndex*20;
+				return 20;
 			}
 		}
-		function geocodeLocationAt(counter, location, locationIndex, allMarkers) {
+		function geocodeLocationAt(counter, location, locationIndex, allMarkers, allPoylines) {
 			if (location !== undefined) {
-				geocodeLocation(counter, location, allMarkers, function(status){
+				geocodeLocation(counter, location, allMarkers, allPolylines, function(status){
 				  if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
 					  setTimeout(function() {
-					  	geocodeLocationAt(counter, location, locationIndex, allMarkers);
-					  }, getTimeLag(aIndex, locationIndex));
+					  	geocodeLocationAt(counter, location, locationIndex, allMarkers, allPolylines);
+					  }, getTimeLag(counter, locationIndex));
 				  }
 				  else if (status == google.maps.GeocoderStatus.OK) {
 				  	locationIndex++;
 				  	location = locations[locationIndex];
 					  setTimeout(function() {
-					  	geocodeLocationAt(counter, location, locationIndex, allMarkers); 
-				 	  }, getTimeLag(aIndex, locationIndex));
+					  	geocodeLocationAt(counter, location, locationIndex, allMarkers, allPolylines); 
+				 	  }, getTimeLag(counter, locationIndex));
 				  }
 				});
 			}
 		}
-		geocodeLocationAt(counter, location, locationIndex, allMarkers);
+		geocodeLocationAt(counter, location, locationIndex, allMarkers, allPolylines);
 	}
 
-	function geocodeLocation(counter, location, allMarkers, callback) {
+	function geocodeLocation(counter, location, allMarkers, allPolylines, callback) {
 		geocoder.geocode({'address': location.dataset.loc}, function(results, status) {
 			if (status == google.maps.GeocoderStatus.OK) {
-				//console.log("ok");
 				latlng = [];
 				lat = results[0].geometry.location.lat().toFixed(6);
 				lng = results[0].geometry.location.lng().toFixed(6);
 				latlng.push(lat);
 				latlng.push(lng);
 				location.dataset.position = latlng[0] + "," + latlng[1];
-				console.log(location.id + " | " + location.dataset.loc + ": " + latlng[0] + ", " + latlng[1]);
 				var newMarker = new L.marker(latlng).addTo(map).bindPopup(location.innerHTML);
 				allMarkers.push(newMarker);
 				location.dataset.marker = allMarkers.indexOf(newMarker);
@@ -199,7 +183,7 @@
 						});
 					}
 				};
-				function drawPolyLines() {
+				function drawPolyLines(allPolylines) {
 					var articleULs = document.getElementsByClassName('group');
 					$.each(articleULs, function(ulIndex, ul) {
 						thisul = ul.querySelectorAll('.article')[0];
@@ -223,6 +207,7 @@
 		      	}							    	
 						var color = (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256));
 		      	var drawpolyline = (L.polyline(polylineArray, {color: 'rgb(' + color + ')', weight: 3, opacity: 0.6})).bindLabel(thisul.innerHTML).addTo(map);
+		      	allPolylines.push(drawpolyline);
 						polylineArrayToUse = JSON.stringify(polylineArray);
 						document.getElementById(thisul.parentNode.id).dataset.polyline = polylineArrayToUse;
 						document.getElementById(thisul.parentNode.id).dataset.color = color;
@@ -235,6 +220,7 @@
 			      	var Polyline = JSON.parse(e.target.parentNode.dataset.polyline);
 			      	var Markers = JSON.parse(e.target.parentNode.dataset.markers);
 			      	var Color = e.target.parentNode.dataset.color;
+			      	L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 3, opacity: 0.6}).bindLabel(e.target.innerHTML).addTo(map);
 			      	setTimeout(function() {	      	
 				      	if (Markers) {
 				      		function drawMarkers(allMarkers) {
@@ -242,7 +228,7 @@
 						      		allMarkers[parseInt(Markers[s])].openPopup();
 						      	}
 						      }
-				      		drawMarkers(allMarkers);				      
+				      		drawMarkers(allMarkers);
 				      		newpolyline = (L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 8, opacity: 1})).bindLabel(e.target.innerHTML).addTo(map);
 			      			map.fitBounds(newpolyline.getBounds());
 				      		setTimeout(function() {map.removeLayer(newpolyline);}, 800);
@@ -258,13 +244,12 @@
 				}				
 				counter.push('');
 				console.log(counter.length);		
-				if (counter.length === 73) {
-					drawPolyLines();
+				if (counter.length === document.getElementsByClassName('point').length) {
+					drawPolyLines(allPolylines);
 				}
 				callback(status);
 			}
 			else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
-				//console.log("overy query limit");
 				callback(status);
 			}
 		});
@@ -277,7 +262,7 @@
 				articles.push(article);
 			}
 		});
-		return articles
+		return articles;
 	}
 
 	var masterList = [];
@@ -338,12 +323,13 @@
 					var allArticles = getArticles(data);
 					var pCounter = 0;
 					var allMarkers = [];
+					var allPolylines = [];
 					var counter = [];
 
 					function drawMarkers() {
 						$.each(allArticles, function(articleIndex, article) {
 							locations = getValidLocations(article);
-							$.when(createLocationsList(locations, articleIndex, pCounter, article)).then(geocodeLocations(counter, articleIndex, allMarkers)).then(function() {pCounter+=locations.length});							
+							$.when(createLocationsList(locations, articleIndex, pCounter, article)).then(geocodeLocations(counter, articleIndex, allMarkers, allPolylines)).then(function() {pCounter+=locations.length});							
 						});		
 					}
 
