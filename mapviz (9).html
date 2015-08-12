@@ -197,138 +197,172 @@
 					function getLocations(locationsList) {
 						$.each(allArticles, function(aIndex, article) {
 							locations = getValidLocations(article);
-							createLocationsList(locationsList, locations, aIndex, pCounter, article);
-							pCounter += locations.length;
+							$.when(createLocationsList(locationsList, locations, aIndex, pCounter, article)).then(function() {pCounter += locations.length;});
 						});
 					}					
 
 					function Draw(locationsList, allMarkers, allPolylines) {
 						var delay = 100;
 						var nextAddress = 0;
-						var locationPoints = document.getElementsByClassName('point');
+						var locationPoints = [];
+						var counter = 0;
+						$.each(locationsList, function(locationIndex, location) {
+							if (location !== ' ') {
+								locationPoints.push(document.getElementsByClassName('point')[counter]);
+								counter++;
+							}
+							else {
+								locationPoints.push(' ');
+							}
+						});
 
-					  function Geocode(address) {
-						  function createMarker(add, point, latlng) {
-						  	var newMarker = new L.marker(latlng).addTo(map).bindPopup(point.innerHTML);
-						  	allMarkers.push(newMarker);
-						  	point.dataset.marker = allMarkers.indexOf(newMarker);
-						  	newMarker.on('mouseover', function(e) {
-						  		this.openPopup();
-						  	});
-						  	newMarker.on('mouseout', function(e) {
-						  		this.closePopup();
-						  	});
-						  	point.onclick = function(e) {
-						  		hidePopups(allMarkers);
-						  		map.addLayer(newMarker);
-						  		allMarkers[parseInt(e.target.dataset.marker)].openPopup();
-						  		var Position = e.target.dataset.position;
-						  		if (Position) {
-						  			map.setView(new L.LatLng(parseFloat(Position.split(',')[0]), parseFloat(Position.split(',')[1])), 8, {
-											animation: true
-										});
-						  		}
-						  	};
-							}				  	
-					    geocoder.geocode({address:address}, function (results,status) { 
-								if (status == google.maps.GeocoderStatus.OK) {
-								 	latlng = [];
-								  var lat=results[0].geometry.location.lat().toFixed(6);
-								  var lng=results[0].geometry.location.lng().toFixed(6);
-								  latlng.push(lat);
-								  latlng.push(lng);
-								  locationPoints[nextaddress].dataset.position = latlng[0] + "," + latlng[1];
-								  createMarker(address, locationPoints[nextaddress], latlng);
-								  Next();
-								}
-								else {
-								  if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
-								    nextAddress--;
-								    delay++;
-								    Next();
-								  } 
-								  else {
-								  }   
-								}
+						function GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers) {
+							if (locationsList[nextAddress] == ' ') {
+								drawPolylines(locationPoints[nextAddress-1].parentNode, allMarkers, allPolylines, function() {
+									nextAddress++;
+									setTimeout(function() {
+										GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
+									}, delay);
+								});
+							}
+							else {
+								Geocode(nextAddress, locationsList[nextAddress], locationPoints, allMarkers, function(status) {
+									if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+										delay++;
+										setTimeout(function() {
+											GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
+										}, delay);
+									}
+									else if (status == google.maps.GeocoderStatus.OK) {
+										nextAddress++;
+										setTimeout(function() {
+											GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
+										}, delay);
+									}
+								});
+							}
+						}
+
+						GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
+
+					  // function Next(nextAddress, locationsList, locationPoints) {
+					  //   if (nextAddress < locationsList.length) {
+					  //   	if (locationsList[nextAddress] === ' ') {
+					  //   		console.log("article: " + locationPoints[nextAddress-1].parentNode.id.replace( /^\D+/g, ''));
+					  //   		setTimeout(drawPolylines(locationPoints[nextAddress-1].parentNode, allMarkers, allPolylines), delay);
+					  //   		nextAddress++;
+					  //   		Next(nextAddress, locationsList, locationPoints);
+					  //   	}
+					  //   	else {
+					  //   		console.log(locationPoints[nextAddress]);
+					  //   		setTimeout(Geocode(nextAddress, locationsList[nextAddress], allMarkers), delay);
+					  //   		nextAddress++;
+					  //   		Next(nextAddress, locationsList, locationPoints);
+					  //   	}
+					  //   }
+					  // }
+
+					  // setTimeout(Next(nextAddress, locationsList, locationPoints), delay);
+					}
+
+				  function Geocode(nextAddress, address, locationPoints, allMarkers, callback) {
+					  
+					  function createMarker(nextAddress, address, point, latlng, allMarkers) {
+					  	var newMarker = new L.marker(latlng).addTo(map).bindPopup(point.innerHTML);
+					  	allMarkers.push(newMarker);
+					  	point.dataset.marker = allMarkers.indexOf(newMarker);
+					  	newMarker.on('mouseover', function(e) {
+					  		this.openPopup();
 					  	});
-					  }	
+					  	newMarker.on('mouseout', function(e) {
+					  		this.closePopup();
+					  	});
+					  	point.onclick = function(e) {
+					  		hidePopups(allMarkers);
+					  		map.addLayer(newMarker);
+					  		allMarkers[parseInt(e.target.dataset.marker)].openPopup();
+					  		var Position = e.target.dataset.position;
+					  		if (Position) {
+					  			map.setView(new L.LatLng(parseFloat(Position.split(',')[0]), parseFloat(Position.split(',')[1])), 8, {
+										animation: true
+									});
+					  		}
+					  	};
+						}
 
-				  	function drawPolylines(article) {
-				  		thisul = article.querySelectorAll('.article')[0];
-				  		var points = article.querySelectorAll('.point');
-				  		var LatLngsInUl = [];
-				  		var polylineArray = [];
-				  		var markersArray = [];
-				  		$.each(points, function(pointIndex, point) {
-				  			if (point.dataset.position) {
-				  				lat = parseFloat(point.dataset.position.split(",")[0]);
-				  				lng = parseFloat(point.dataset.position.split(",")[1]);
-				  				LatLngsInUl.push([lat, lng]);
-				  			}
-				  			if (point.dataset.marker) {
-				  				markersArray.push(parseInt(point.dataset.marker));
-				  			}
-				  		});
-				  		for (var m = 0; m < LatLngsInUl.length; m++) { //for each pair of lat, lngs in article
-				  			polylineArray.push(LatLngsInUl[m]);
-				  		}
-				  		var color = (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256));
-				  		var drawpolyline = (L.polyline(polylineArray, {color: 'rgb(' + color + ')', weight: 3, opacity: 0.6})).bindLabel(thisul.innerHTML).addTo(map);
-			      	allPolylines.push(drawpolyline);
-							polylineArrayToUse = JSON.stringify(polylineArray);
-							document.getElementById(thisul.parentNode.id).dataset.polyline = polylineArrayToUse;
-							document.getElementById(thisul.parentNode.id).dataset.color = color;
-							document.getElementById(thisul.parentNode.id).dataset.markers = JSON.stringify(markersArray);
-				      thisul.onclick = function(e) {
-								map.setView(new L.LatLng(15, -5), 2, {
-						      animation: true
-						    });							      	
-				      	hidePopups(allMarkers);
-				      	var Polyline = JSON.parse(e.target.parentNode.dataset.polyline);
-				      	var Markers = JSON.parse(e.target.parentNode.dataset.markers);
-				      	var Color = e.target.parentNode.dataset.color;
-				      	L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 3, opacity: 0.6}).bindLabel(e.target.innerHTML).addTo(map);
-				      	setTimeout(function() {	      	
-					      	if (Markers) {
-					      		function drawMarkers(allMarkers) {
-							      	for (var s = 0; s < Markers.length; s++) { //for each marker in article
-							      		allMarkers[parseInt(Markers[s])].openPopup();
-							      	}
-							      }
-					      		drawMarkers(allMarkers);
+				    geocoder.geocode({address:address}, function (results,status) { 
+							if (status == google.maps.GeocoderStatus.OK) {
+							 	latlng = [];
+							  var lat=results[0].geometry.location.lat().toFixed(6);
+							  var lng=results[0].geometry.location.lng().toFixed(6);
+							  latlng.push(lat);
+							  latlng.push(lng);
+							  point = locationPoints[nextAddress];
+							  point.dataset.position = latlng[0] + "," + latlng[1];
+							  createMarker(nextAddress, address, point, latlng, allMarkers);
+						  	console.log(locationPoints[nextAddress]);
+						  	callback(status);									  
+							}
+				  	});		  	
+				  }	
+
+			  	function drawPolylines(article, allMarkers, allPolylines, callback) {
+			  		thisul = article.querySelectorAll('.article')[0];
+			  		var points = article.querySelectorAll('.point');
+			  		var LatLngsInUl = [];
+			  		var polylineArray = [];
+			  		var markersArray = [];
+			  		$.each(points, function(pointIndex, point) {
+			  			if (point.dataset.position) {
+			  				lat = parseFloat(point.dataset.position.split(",")[0]);
+			  				lng = parseFloat(point.dataset.position.split(",")[1]);
+			  				LatLngsInUl.push([lat, lng]);
+			  			}
+			  			if (point.dataset.marker) {
+			  				markersArray.push(parseInt(point.dataset.marker));
+			  			}
+			  		});
+			  		for (var m = 0; m < LatLngsInUl.length; m++) { //for each pair of lat, lngs in article
+			  			polylineArray.push(LatLngsInUl[m]);
+			  		}
+			  		var color = (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256));
+			  		var drawpolyline = (L.polyline(polylineArray, {color: 'rgb(' + color + ')', weight: 3, opacity: 0.6})).bindLabel(thisul.innerHTML).addTo(map);
+		      	allPolylines.push(drawpolyline);
+						polylineArrayToUse = JSON.stringify(polylineArray);
+						document.getElementById(thisul.parentNode.id).dataset.polyline = polylineArrayToUse;
+						document.getElementById(thisul.parentNode.id).dataset.color = color;
+						document.getElementById(thisul.parentNode.id).dataset.markers = JSON.stringify(markersArray);
+			      thisul.onclick = function(e) {
+							map.setView(new L.LatLng(15, -5), 2, {
+					      animation: true
+					    });							      	
+			      	hidePopups(allMarkers);
+			      	var Polyline = JSON.parse(e.target.parentNode.dataset.polyline);
+			      	var Markers = JSON.parse(e.target.parentNode.dataset.markers);
+			      	var Color = e.target.parentNode.dataset.color;
+			      	L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 3, opacity: 0.6}).bindLabel(e.target.innerHTML).addTo(map);
+			      	setTimeout(function() {	      	
+				      	if (Markers) {
+				      		function drawMarkers(allMarkers) {
+						      	for (var s = 0; s < Markers.length; s++) { //for each marker in article
+						      		allMarkers[parseInt(Markers[s])].openPopup();
+						      	}
+						      }
+				      		drawMarkers(allMarkers);
+				      		newpolyline = (L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 8, opacity: 1})).bindLabel(e.target.innerHTML).addTo(map);
+			      			map.fitBounds(newpolyline.getBounds());
+				      		setTimeout(function() {map.removeLayer(newpolyline);}, 800);
+				      		setTimeout(function() {
 					      		newpolyline = (L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 8, opacity: 1})).bindLabel(e.target.innerHTML).addTo(map);
 				      			map.fitBounds(newpolyline.getBounds());
 					      		setTimeout(function() {map.removeLayer(newpolyline);}, 800);
-					      		setTimeout(function() {
-						      		newpolyline = (L.polyline(Polyline, {color: 'rgb(' + Color + ')', weight: 8, opacity: 1})).bindLabel(e.target.innerHTML).addTo(map);
-					      			map.fitBounds(newpolyline.getBounds());
-						      		setTimeout(function() {map.removeLayer(newpolyline);}, 800);
-					      		}, 1600);
-					      	}
-					      }, 800);	
-					  	};
-					  }
+				      		}, 1600);
+				      	}
+				      }, 800);	
+				  	};
+				  	callback();
+				  }		
 
-					  function Next() {
-					    if (nextAddress < locationsList.length) {
-					    	location = locationsList[nextAddress];
-					    	if (location == ' ') {
-									article = locationPoints[nextAddress-1].parentNode;
-					    	}
-					    	if (location !== ' ') {
-					    		setTimeout(Geocode(location), delay);
-					    	}
-					    	else {
-					    		setTimeout(drawPolylines(article), delay);
-					    	}
-					      nextAddress++;
-					    }
-					    else {
-
-					    }
-					  }
-					  Next();						
-					}
 					getLocations(locationsList);
 					Draw(locationsList, allMarkers, allPolylines);
 				}
