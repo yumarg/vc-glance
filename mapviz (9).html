@@ -202,7 +202,6 @@
 					}					
 
 					function Draw(locationsList, allMarkers, allPolylines) {
-						var delay = 100;
 						var nextAddress = 0;
 						var locationPoints = [];
 						var counter = 0;
@@ -216,30 +215,42 @@
 							}
 						});
 
+						function getTimeLag(status, nextAddress, locationsList) {
+							// if (nextAddress % 4 == 0) {
+							// 	return 500;
+							// }							
+							// if (locationsList[nextAddress] == ' ') {
+							// 	return 500;
+							// }
+							// else {
+							// 	return 100;
+							// }
+							return 100+Math.pow((nextAddress % 8), 3);
+						}
+
 						function GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers) {
 							if (locationsList[nextAddress] == ' ') {
 								drawPolylines(locationPoints[nextAddress-1].parentNode, allMarkers, allPolylines, function() {
 									nextAddress++;
 									setTimeout(function() {
 										GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
-									}, delay);
+									}, 10);
 								});
 							}
 							else {
-								Geocode(nextAddress, locationsList[nextAddress], locationPoints, allMarkers, function(status) {
+								setTimeout(Geocode(nextAddress, locationsList[nextAddress], locationPoints, allMarkers, function(status) {
 									if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
-										delay++;
 										setTimeout(function() {
 											GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
-										}, delay);
+										}, 100);
 									}
 									else if (status == google.maps.GeocoderStatus.OK) {
 										nextAddress++;
 										setTimeout(function() {
 											GeocodeAt(nextAddress, locationsList, locationPoints, allMarkers);
-										}, delay);
+										}, 10);
 									}
-								});
+								}), getTimeLag(status, nextAddress, locationsList));
 							}
 						}
 
@@ -300,10 +311,13 @@
 							  point = locationPoints[nextAddress];
 							  point.dataset.position = latlng[0] + "," + latlng[1];
 							  createMarker(nextAddress, address, point, latlng, allMarkers);
-						  	console.log(locationPoints[nextAddress]);
+						  	console.log(locationPoints[nextAddress].id + "| " + locationPoints[nextAddress].dataset.loc);
 						  	callback(status);									  
 							}
-				  	});		  	
+							else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+								callback(status);
+							}
+				  	});  	
 				  }	
 
 			  	function drawPolylines(article, allMarkers, allPolylines, callback) {
