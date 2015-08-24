@@ -23,15 +23,15 @@ html, body {
 
 #map {
     position: absolute;
-    width: 960px;
-    height: 595px;
+    width: 1060px;
+    height: 700px;
 }
 
 #locations {
     position: absolute;
-    margin-left: 960px;
-    max-width: 363px;
-    max-height: 595px;
+    margin-left: 1060px;
+    max-width: 300px;
+    max-height: 700px;
     overflow-y: auto;
     font-size: 14px;
 }
