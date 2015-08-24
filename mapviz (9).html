@@ -295,6 +295,17 @@
 					  	newMarker.on('mouseout', function(e) {
 					  		this.closePopup();
 					  	});
+					  	newMarker.on("click", function(e) {
+					  		console.log(e.target._latlng);
+				  			$.each(allMarkers, function(markerIndex, marker) {
+				  				if (JSON.stringify(e.target._latlng) == JSON.stringify(marker._latlng)) {
+				  					document.getElementById(markerIndex).parentNode.style.background = "#7fc2c5";
+				  					setTimeout(function() {
+				  						document.getElementById(markerIndex).parentNode.style.background = "#fff";
+				  					}, 5000);
+				  				}
+				  			});					  		
+					  	});
 					  	point.onclick = function(e) {
 					  		hidePopups(allMarkers);
 					  		map.addLayer(newMarker);
@@ -356,7 +367,7 @@
 			  		drawpolyline.on("click", function(e) {
 			  			$.each(allPolylines, function(polylineIndex, polyline) {
 			  				if (JSON.stringify(e.target._latlngs) == JSON.stringify(polyline._latlngs)) {
-			  					document.getElementsByClassName("group")[polylineIndex].style.background = "#d8d8d8";
+			  					document.getElementsByClassName("group")[polylineIndex].style.background = "#7fc2c5";
 			  					setTimeout(function() {
 			  						document.getElementsByClassName("group")[polylineIndex].style.background = "#fff";
 			  					}, 5000);
