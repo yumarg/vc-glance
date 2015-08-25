@@ -2,10 +2,11 @@
 <head lang="en">
 <meta charset="utf-8">
 <title>M A P</title>
-<script src="jquery.js"></script>
-<link rel="stylesheet" type="text/css" href="mapviz (9).css">
 <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css">
 <link rel="stylesheet" href="http://leaflet.github.io/Leaflet.label/leaflet.label.css">
+<link href="http://netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="mapviz (9).css">
+<script src="jquery.js"></script>
 <script type="text/javascript" src="nicescroll.min.js"></script>
 <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=false"></script>
 <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
@@ -181,8 +182,11 @@
 				dataType: 'json',
 				success: function(data) {
 
-					$("#locations").append("<p id='locationsp' style='font-weight: bold; color: #126180; font-size: 20px; margin-bottom: 10px'>LOCATIONS</p>");
+					$("#locations").append("<p id='locationsp' style='font-weight: bold; color: #126180; font-size: 20px; margin-bottom: 15px'>A R T I C L E S</p>");
 					$("#locationsp").click(function() {
+						$(".group").show();
+						$("ul:visible").css("margin-top", "0px");
+						$("ul:visible:first").css("margin-top", "30px");						
 						hidePopups(allMarkers);
 						map.setView(new L.LatLng(15, -5), 2, {
 				      animation: true
@@ -296,13 +300,15 @@
 					  		this.closePopup();
 					  	});
 					  	newMarker.on("click", function(e) {
-					  		console.log(e.target._latlng);
+				  			$(".group").hide();					  		
 				  			$.each(allMarkers, function(markerIndex, marker) {
 				  				if (JSON.stringify(e.target._latlng) == JSON.stringify(marker._latlng)) {
-				  					document.getElementById(markerIndex).parentNode.style.background = "#7fc2c5";
-				  					setTimeout(function() {
-				  						document.getElementById(markerIndex).parentNode.style.background = "#fff";
-				  					}, 5000);
+				  					// document.getElementById(markerIndex).parentNode.style.background = "#7fc2c5";
+				  					// setTimeout(function() {
+				  					// 	document.getElementById(markerIndex).parentNode.style.background = "#fff";
+				  					// }, 5000);
+				  					$("#"+markerIndex).parent().show();
+					          $("ul:visible:first").css("margin-top", "30px");
 				  				}
 				  			});					  		
 					  	});
@@ -329,7 +335,7 @@
 							  point = locationPoints[nextAddress];
 							  point.dataset.position = latlng[0] + "," + latlng[1];
 							  createMarker(nextAddress, address, point, latlng, allMarkers);
-						  	console.log(locationPoints[nextAddress].id + "| " + locationPoints[nextAddress].dataset.loc);
+						  	//console.log(locationPoints[nextAddress].id + "| " + locationPoints[nextAddress].dataset.loc);
 						  	callback(status);									  
 							}
 							else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
@@ -365,12 +371,15 @@
 						document.getElementById(thisul.parentNode.id).dataset.color = color;
 						document.getElementById(thisul.parentNode.id).dataset.markers = JSON.stringify(markersArray);
 			  		drawpolyline.on("click", function(e) {
+			  			$(".group").hide();
 			  			$.each(allPolylines, function(polylineIndex, polyline) {
 			  				if (JSON.stringify(e.target._latlngs) == JSON.stringify(polyline._latlngs)) {
-			  					document.getElementsByClassName("group")[polylineIndex].style.background = "#7fc2c5";
-			  					setTimeout(function() {
-			  						document.getElementsByClassName("group")[polylineIndex].style.background = "#fff";
-			  					}, 5000);
+			  					// document.getElementsByClassName("group")[polylineIndex].style.background = "#7fc2c5";
+			  					// setTimeout(function() {
+			  					// 	document.getElementsByClassName("group")[polylineIndex].style.background = "#fff";
+			  					// }, 5000);
+			  					$("#article"+polylineIndex).show();
+				          $("ul:visible:first").css("margin-top", "30px");			  					
 			  				}
 			  			});
 			  		});						
@@ -418,6 +427,87 @@
 
 					getLocations(locationsList);
 					Draw(locationsList, allMarkers, allPolylines);
+
+					(function ($) {
+					  jQuery.expr[':'].Contains = function(a,i,m){
+					      return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase())>=0;
+					  };
+
+
+					  function Filter(list) {
+					    var form = $("<form>").attr({"class":"searchbox","action":"javascript:void(0)"}),
+					        input = $("<input>").attr({"class":"search-control","type":"text", "placeholder": " Type to filter articles", "size": "40"});
+					    $(form).append(input).appendTo($("body"));
+
+					    var typingTimer;
+
+					    $(input).keyup(function() {
+					    	clearTimeout(typingTimer);
+					    	typingTimer = setTimeout(goFilter(list), 3000);
+					    });
+
+					    $(input).keydown(function() {
+					    	clearTimeout(typingTimer);
+					    });
+
+							function goFilter(list) {
+					      $("ul").hide();      	
+				        var filter = $(input).val();
+				        if (filter) {				        	
+				          $(list).find("li:not(:Contains(" + filter + "))").parent().hide();
+				          $(list).find("li:Contains(" + filter + ")").parent().show();
+				          $("ul").css("margin-top", "0px");
+				          $("ul:visible:first").css("margin-top", "30px");
+
+				          $.each(allArticles, function(articleI, article) {
+				          	$.each(article, function(keyIndex, key) {
+				          		if (typeof(key) == "object") {
+					          		$.each(key, function(valueIndex, value) {
+					          			if (typeof(value) == "string") {
+							          		if (JSON.stringify(key).toLowerCase().indexOf(filter.toLowerCase()) != -1) {
+							          			$("#article"+articleI).show();
+				          						$("ul").css("margin-top", "0px");
+							          			$("ul:visible:first").css("margin-top", "30px");		          			
+							          		}
+					          			}
+					          			else if (typeof(value) == "number") {
+						          			if (value == filter) {						          				
+							          			$("#article"+articleI).show();
+				          						$("ul").css("margin-top", "0px");							          			
+							          			$("ul:visible:first").css("margin-top", "30px");
+						          			}						          				
+					          			}
+					          		});
+				          		}
+				          		else if (typeof(key) == "string") {
+					          		if (JSON.stringify(key).toLowerCase().indexOf(filter.toLowerCase()) != -1) {
+					          			$("#article"+articleI).show();
+				          				$("ul").css("margin-top", "0px");
+					          			$("ul:visible:first").css("margin-top", "30px");		          			
+					          		}					          			
+				          		}
+				          		else if (typeof(key) == "number") {
+				          			if (key == filter) {
+					          			$("#article"+articleI).show();
+				          				$("ul").css("margin-top", "0px");					          			
+					          			$("ul:visible:first").css("margin-top", "30px");
+				          			}
+				          		}
+				          	}); 
+				          });
+				        } else {
+				          $("ul").show();
+				          $("ul").css("margin-top", "0px");				          
+				          $("ul:visible:first").css("margin-top", "30px");
+				        }
+				        return false;
+				      }
+					  }
+
+					  $(function () {
+					    Filter($("#locations"));
+					  });
+					}(jQuery));					
 				}
 			});
 		}
