@@ -454,47 +454,62 @@
 					      $("ul").hide();      	
 				        var filter = $(input).val();
 				        if (filter) {				        	
-				          $(list).find("li:not(:Contains(" + filter + "))").parent().hide();
-				          $(list).find("li:Contains(" + filter + ")").parent().show();
-				          $("ul").css("margin-top", "0px");
-				          $("ul:visible:first").css("margin-top", "30px");
-
-				          $.each(allArticles, function(articleI, article) {
-				          	$.each(article, function(keyIndex, key) {
-				          		if (typeof(key) == "object") {
-					          		$.each(key, function(valueIndex, value) {
-					          			if (typeof(value) == "string") {
-							          		if (JSON.stringify(key).toLowerCase().indexOf(filter.toLowerCase()) != -1) {
-							          			$("#article"+articleI).show();
-				          						$("ul").css("margin-top", "0px");
-							          			$("ul:visible:first").css("margin-top", "30px");		          			
-							          		}
-					          			}
-					          			else if (typeof(value) == "number") {
-						          			if (value == filter) {						          				
-							          			$("#article"+articleI).show();
-				          						$("ul").css("margin-top", "0px");							          			
-							          			$("ul:visible:first").css("margin-top", "30px");
-						          			}						          				
-					          			}
-					          		});
-				          		}
-				          		else if (typeof(key) == "string") {
-					          		if (JSON.stringify(key).toLowerCase().indexOf(filter.toLowerCase()) != -1) {
-					          			$("#article"+articleI).show();
-				          				$("ul").css("margin-top", "0px");
-					          			$("ul:visible:first").css("margin-top", "30px");		          			
-					          		}					          			
-				          		}
-				          		else if (typeof(key) == "number") {
-				          			if (key == filter) {
-					          			$("#article"+articleI).show();
-				          				$("ul").css("margin-top", "0px");					          			
-					          			$("ul:visible:first").css("margin-top", "30px");
-				          			}
-				          		}
-				          	}); 
-				          });
+				        	function searchWord(list, word, article) {
+				        		var Matched = 0;
+										var arrayToCheck = [article.author, article.title, article.text, article.persons, article.locations, article.organizations];
+										$.each(arrayToCheck, function(index, value) {
+											var toType = function(obj) {
+											  return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
+											}											
+											if (toType(value) == "string") {
+												if ( (JSON.stringify(value).toUpperCase().search(word.toUpperCase())) != -1) {
+													Matched++;
+												}
+											}
+											else if (toType(value) == "array") {
+												$.each(value, function(index, content) {
+													if ( (JSON.stringify(content).toUpperCase().search(word.toUpperCase())) != -1) {
+														Matched++;
+													}										
+												});												
+											}
+										});	
+										if (Matched > 0) {
+											return true;
+										}
+										else {
+											return false;
+										}	
+									}
+									if (filter.indexOf(" ") != -1) {
+										filtered = filter.split(" ");						
+										$.each(allArticles, function(index, article) {
+											allMatched = 0;
+											$.each(filtered, function(Windex, word) {
+												if (searchWord(list, word, article)) {
+													allMatched++;
+												}
+											});
+											if (allMatched == filtered.length) {
+												$("#article"+index).show();
+			          				$("ul").css("margin-top", "0px");
+				          			$("ul:visible:first").css("margin-top", "30px");												
+											}
+										});
+									}
+									else {
+										$(list).find("li:not(:Contains(" + filter + "))").parent().hide();
+					          $(list).find("li:Contains(" + filter + ")").parent().show();
+					          $("ul").css("margin-top", "0px");
+					          $("ul:visible:first").css("margin-top", "30px");
+					          $.each(allArticles, function(index, article) {
+					          	if (searchWord(list, filter, article)) {
+												$("#article"+index).show();
+			          				$("ul").css("margin-top", "0px");
+				          			$("ul:visible:first").css("margin-top", "30px");
+					          	}
+					          });
+									}
 				        } else {
 				          $("ul").show();
 				          $("ul").css("margin-top", "0px");				          
